@@ -1,0 +1,71 @@
+#ifndef __EXTERNAL_AUDIO_H__
+#define __EXTERNAL_AUDIO_H__
+
+#include "audio_i2s.h"
+#ifndef USE_I2S_AUDIO
+#define USE_I2S_AUDIO PICO_AUDIO_I2S_DRIVER_NONE
+#endif
+
+#ifndef USE_SPI_AUDIO
+#define USE_SPI_AUDIO 0
+#endif
+
+// Driver selection between the legacy custom I2S driver and the pico-extras
+// based one. Set via -DUSE_PICO_EXTRAS_I2S=ON when configuring; default off.
+#ifndef USE_PICO_EXTRAS_I2S
+#define USE_PICO_EXTRAS_I2S 0
+#endif
+
+// generete a compiler error if both USE_I2S_AUDIO and USE_SPI_AUDIO are defined
+#if USE_I2S_AUDIO > 0 && USE_SPI_AUDIO == 1
+#error "Both USE_I2S_AUDIO and USE_SPI_AUDIO cannot be defined at the same time. Please define only one."
+#endif
+
+#define EXT_AUDIO_IS_ENABLED (USE_I2S_AUDIO || USE_SPI_AUDIO)
+
+#if USE_I2S_AUDIO
+#include "audio_i2s.h"
+#define EXT_AUDIO_ENQUEUE_SAMPLE(l, r)  audio_i2s_enqueue_sample( ((uint32_t)(uint16_t)(l) << 16) | (uint16_t)(r) )
+// Define a macro for setting up the I2S audio hardware
+// The macro takes the driver, frequency, and a DMA channel as parameters. -1 means find the first unused DMA channel
+// If the driver is PICO_AUDIO_I2S_DRIVER_NONE, it will skip the setup
+#define EXT_AUDIO_SETUP(driver, freq, dmachannelstart) audio_i2s_setup(driver, freq, dmachannelstart)
+#define EXT_AUDIO_DACERROR() audio_i2s_dacError()
+#define EXT_AUDIO_DISABLE() audio_i2s_disable()
+#define EXT_AUDIO_MUTE_INTERNAL_SPEAKER(mute) audio_i2s_muteInternalSpeaker(mute)
+#define EXT_AUDIO_SETVOLUME(level) audio_i2s_setVolume(level) 
+#define EXT_AUDIO_POLL_HEADPHONE() audio_i2s_poll_headphone_status()
+// Free space in the output ring, in stereo frames. Lets a caller close the loop
+// on its own production rate instead of assuming an exact frames-per-second.
+#define EXT_AUDIO_GET_FREE() audio_i2s_get_freebuffer_size()
+#endif
+
+// SPI audio is not supported in the current version of the code, but we keep the definition for future use.
+#if USE_SPI_AUDIO
+#include "audio_spi.h"
+extern audio_spi_hw_t *spi_audio_hw;
+#define EXT_AUDIO_ENQUEUE_SAMPLE(l, r) audio_spi_enqueue_sample(l, r)   
+#define EXT_AUDIO_SETUP(driver, freq, dmachan) audio_spi_setup(driver, freq, dmachan)
+#define EXT_AUDIO_DACERROR() (false)
+#define EXT_AUDIO_DISABLE() (0)
+#define EXT_AUDIO_MUTE_INTERNAL_SPEAKER(mute) (0)
+#define EXT_AUDIO_SETVOLUME(level) (0)
+#define EXT_AUDIO_POLL_HEADPHONE() (0)
+#define EXT_AUDIO_GET_FREE() (0)
+#endif
+// If neither I2S nor SPI audio is enabled, define the functions as no-ops
+#if !EXT_AUDIO_IS_ENABLED
+#ifndef EXT_AUDIO_ENQUEUE_SAMPLE
+#define EXT_AUDIO_ENQUEUE_SAMPLE(l, r)  (0)
+#endif
+#ifndef EXT_AUDIO_SETUP
+#define EXT_AUDIO_SETUP(driver, freq, dmachan) (driver, freq, dmachan)
+#endif
+#define EXT_AUDIO_DACERROR() (false)
+#define EXT_AUDIO_DISABLE() (0)
+#define EXT_AUDIO_MUTE_INTERNAL_SPEAKER(mute) (0)
+#define EXT_AUDIO_SETVOLUME(level) (0)
+#define EXT_AUDIO_POLL_HEADPHONE() (0)
+#define EXT_AUDIO_GET_FREE() (0)
+#endif
+#endif // __EXTERNAL_AUDIO_H__

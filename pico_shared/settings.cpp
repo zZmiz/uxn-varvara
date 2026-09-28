@@ -1,0 +1,323 @@
+#include "settings.h"
+#include <stdio.h>
+#include <string.h>
+#include <strings.h> // for strcasecmp
+#include "vumeter.h"
+struct settings settings;
+namespace FrensSettings
+{
+    #define SETTINGSFILE "/settings_%s.dat" // File to store settings
+    static const char *emulatorstrings[11] = { "NES", "SMS", "GB", "MD", "MUL", "PCE", "O2E", "SNES", "TI99", "ORUN", "UXN" };
+    static char settingsFileName[21] = {};
+    static emulators emulatorTypeForSettings = emulators::MULTI;
+    char *getSettingsFileName()
+    {
+        if (settingsFileName[0] == '\0')
+        {
+            snprintf(settingsFileName, sizeof(settingsFileName), SETTINGSFILE, emulatorstrings[static_cast<int>(emulatorTypeForSettings)]);
+        }
+        return settingsFileName;
+    }
+    void initSettings(emulators emu)
+    {
+        emulatorType = emulatorTypeForSettings = emu;
+        // pick a random initial emulator type to show artwork in the menu
+        if ( emu == emulators::MULTI ) {
+            emulatorType = emulators::NES;
+        }   
+       // loadsettings();
+    }
+    void setEmulatorType(const char * fileextension)
+    {
+        if (strcasecmp(fileextension, ".nes") == 0 || strcasecmp(fileextension, ".fds") == 0 || strcasecmp(fileextension, ".nsf") == 0)
+        {
+            if ( emulatorType == emulators::NES ) return;
+            emulatorType = emulators::NES;
+            g_settings_visibility = g_settings_visibility_nes;
+        }
+        else if (strcasecmp(fileextension, ".sms") == 0 || strcasecmp(fileextension, ".gg") == 0)
+        {
+            if ( emulatorType == emulators::SMS ) return;
+            emulatorType = emulators::SMS;
+            g_settings_visibility = g_settings_visibility_sms;
+        }
+        else if (strcasecmp(fileextension, ".gb") == 0 || strcasecmp(fileextension, ".gbc") == 0)
+        {
+            if ( emulatorType == emulators::GAMEBOY ) return;
+            emulatorType = emulators::GAMEBOY;
+            g_settings_visibility = g_settings_visibility_gb;
+        }
+        else if (strcasecmp(fileextension, ".pce") == 0)
+        {
+            if ( emulatorType == emulators::PCE ) return;
+            emulatorType = emulators::PCE;
+            g_settings_visibility = g_settings_visibility_pce;
+        }
+        else if (strcasecmp(fileextension, ".rpk") == 0 || strcasecmp(fileextension, ".tib") == 0)
+        {
+            if ( emulatorType == emulators::TI99 ) return;
+            emulatorType = emulators::TI99;
+            g_settings_visibility = g_settings_visibility_ti99;
+        }
+        else if (strcasecmp(fileextension, ".gen") == 0 || strcasecmp(fileextension, ".md") == 0|| strcasecmp(fileextension, ".bin") == 0)
+        {
+            // .bin is ambiguous - Mega Drive images and TI-99/4A C/D/G cartridge parts
+            // both use it. A single-emulator build has already pinned its type through
+            // initSettings(), so honour that; multi-emulator builds keep the old
+            // Mega Drive default.
+            if ( emulatorTypeForSettings == emulators::TI99 )
+            {
+                if ( emulatorType == emulators::TI99 ) return;
+                emulatorType = emulators::TI99;
+                g_settings_visibility = g_settings_visibility_ti99;
+            }
+            else
+            {
+                if ( emulatorType == emulators::GENESIS ) return;
+                emulatorType = emulators::GENESIS;
+                g_settings_visibility = g_settings_visibility_md;
+            }
+        }
+        else if (strcasecmp(fileextension, ".smc") == 0 || strcasecmp(fileextension, ".sfc") == 0)
+        {
+            if ( emulatorType == emulators::SNES ) return;
+            emulatorType = emulators::SNES;
+            g_settings_visibility = g_settings_visibility_snes;
+        }
+        else
+        {
+            if ( emulatorType == emulators::MULTI ) return;
+            emulatorType = emulators::MULTI;
+            g_settings_visibility = g_settings_visibility_main;
+        }
+        printf("Detected ROM extension: %s\n", fileextension);
+        //snprintf(settingsFileName, sizeof(settingsFileName), SETTINGSFILE, emulatorstrings[static_cast<int>(emulatorType)]);
+        // loadsettings();
+    }
+    void printsettings()
+    {
+        printf("Settings Version: %d\n", settings.version);
+        printf("ScreenMode: %d\n", (int)settings.screenMode);
+        printf("firstVisibleRowINDEX: %d\n", settings.firstVisibleRowINDEX);
+        printf("selectedRow: %d\n", settings.selectedRow);
+        printf("horzontalScrollIndex: %d\n", settings.horzontalScrollIndex);
+        printf("currentDir: %s\n", settings.currentDir);
+        printf("fgcolor: %d\n", settings.fgcolor);
+        printf("bgcolor: %d\n", settings.bgcolor);
+        printf("useExtAudio: %d\n", settings.flags.useExtAudio);
+        printf("enableVUMeter: %d\n", settings.flags.enableVUMeter);
+        printf("borderMode: %d\n", settings.flags.borderMode);
+        printf("dmgLCDPalette: %d\n", settings.flags.dmgLCDPalette);
+        printf("audioEnabled: %d\n", settings.flags.audioEnabled);
+        printf("displayFrameRate: %d\n", settings.flags.displayFrameRate);
+        printf("frameSkip: %d\n", settings.flags.frameSkip);
+        printf("scanlineOn: %d\n", settings.flags.scanlineOn);
+        //printf("fruitJamEnableInternalSpeaker: %d\n", settings.flags.fruitJamEnableInternalSpeaker);
+        printf("fruitjamVolumeLevel: %d\n", settings.fruitjamVolumeLevel);
+        printf("scanlineType: %d\n", settings.scanlineType);
+        printf("rapidFireOnA: %d\n", settings.flags.rapidFireOnA);
+        printf("rapidFireOnB: %d\n", settings.flags.rapidFireOnB);
+        printf("useDVIModeForHDMI: %d\n", settings.flags.useDVIModeForHDMI);
+        printf("autoSwapFDS: %d\n", settings.flags.autoSwapFDS);
+        printf("autoInsertDiskA: %d\n", settings.flags.autoInsertDiskA);
+        printf("overclock: %d\n", settings.flags.overclock);
+        printf("useFM: %d\n", settings.flags.useFM);
+        printf("serialKeyboard: %d\n", settings.flags.serialKeyboard);
+        printf("removeSpriteLimit: %d\n", settings.flags.removeSpriteLimit);
+        printf("menuOverscan: %d\n", settings.flags.menuOverscan);
+        printf("\n");
+    }
+    void resetsettings(struct settings *settingsPtr)
+    {
+        struct settings &settings = settingsPtr ? *settingsPtr : ::settings;
+        // Reset settings to default
+        printf("Resetting settings\n");
+        settings.screenMode = (emulatorType == emulators::NES) ? ScreenMode::SCANLINE_8_7 : ScreenMode::NOSCANLINE_1_1;
+        settings.firstVisibleRowINDEX = 0;
+        settings.selectedRow = 0;
+        settings.horzontalScrollIndex = 0;
+        settings.fgcolor = DEFAULT_FGCOLOR;
+        settings.bgcolor = DEFAULT_BGCOLOR;
+        settings.flags.useExtAudio = (HW_CONFIG == 13); // default on Murmulator M2 (HW_CONFIG == 13) to use external audio output, otherwise default to HDMI audio 
+        settings.flags.enableVUMeter = ENABLE_VU_METER ? 1 : 0; // default to ENABLE_VU_METER
+        settings.flags.borderMode = THEMEDBORDER;
+        settings.flags.dmgLCDPalette = 0; // default DMG LCD Palette, DMG Green
+        settings.flags.audioEnabled = 1; // audio on by default
+        settings.flags.displayFrameRate = 0; // default: do not show FPS overlay
+        settings.flags.frameSkip = 1; // default: frame skipping enabled (Genesis needs it)
+        // Legacy standalone scanline toggle, superseded by screenMode: every port
+        // hides MOPT_SCANLINES, so nothing writes this bit any more. Reset it
+        // anyway - leaving it out made "Reset to defaults" carry a stale value
+        // over from the loaded settings file instead of restoring the off state
+        // a fresh (zero-initialised) settings struct starts in.
+        settings.flags.scanlineOn = 0; // default: scanlines off (screenMode owns this now)
+        //settings.flags.fruitJamEnableInternalSpeaker = 1; // default: enable Fruit Jam internal speaker
+        settings.flags.rapidFireOnA = 0; // default: rapid fire off
+        settings.flags.rapidFireOnB = 0; // default: rapid fire off
+        settings.fruitjamVolumeLevel = 16; // default volume level in db to mid (0-24)
+        settings.scanlineType = 0;
+        settings.flags.useDVIModeForHDMI = (HW_CONFIG == 13 && ENABLEDVI); // default on Murmulator M2 (HW_CONFIG == 13) to use DVI mode for HDMI output
+        settings.version = SETTINGS_VERSION;
+        settings.flags.autoSwapFDS = 0;
+        settings.flags.autoInsertDiskA = 1; // default: disk side A pre-inserted at boot
+        settings.flags.overclock = 0; // default: run at FLASHPARAM_MIN_FREQ_KHZ
+        settings.flags.useFM = 0; // default: disable FM audio
+        settings.flags.serialKeyboard = 0; // default: ignore the serial console as an input
+        settings.flags.removeSpriteLimit = 0; // default: NES hardware limit of 8 sprites per scanline
+        settings.flags.menuOverscan = 0; // default: menu uses the whole screen
+        settings.flags.reserved = 0;  // clear spare bits
+        snprintf(settings.currentDir, sizeof(settings.currentDir), "/roms/%s", emulatorstrings[static_cast<int>(emulatorType)]);
+    }
+
+    void savesettings()
+    {
+        // Save settings to file
+        // FIL is ~600 bytes - allocate on heap to avoid stack overflow
+        FIL *fil = (FIL *)Frens::f_malloc(sizeof(FIL));
+        if (!fil) {
+            printf("savesettings: failed to allocate FIL\n");
+            return;
+        }
+        UINT bw;
+        FRESULT fr;
+        printf("Saving settings to %s\n", getSettingsFileName());
+        fr = f_open(fil, getSettingsFileName(), FA_WRITE | FA_CREATE_ALWAYS);
+        if (fr == FR_OK)
+        {
+            fr = f_write(fil, &settings, sizeof(settings), &bw);
+            if (fr)
+            {
+                printf("Error writing %s: %d\n", getSettingsFileName(), fr);
+            }
+            else
+            {
+                printf("Wrote %d bytes to %s\n", bw, getSettingsFileName());
+            }
+            f_close(fil);
+        }
+        else
+        {
+            printf("Error opening %s: %d\n", getSettingsFileName(), fr);
+        }
+        Frens::f_free(fil);
+        printsettings();
+#if HSTX
+        printf("Setting HDMI DVI mode to %d\n", settings.flags.useDVIModeForHDMI);
+        video_output_set_dvi_mode(settings.flags.useDVIModeForHDMI);
+        printf("done\n");
+#endif
+    }
+
+    void loadsettings()
+    {
+        // FIL ~600 bytes, DIR ~80 bytes, FILINFO ~280 bytes - put on heap
+        FIL *fil = (FIL *)Frens::f_malloc(sizeof(FIL));
+        DIR *dir = (DIR *)Frens::f_malloc(sizeof(DIR));
+        FILINFO *fno = (FILINFO *)Frens::f_malloc(sizeof(FILINFO));
+        if (!fil || !dir || !fno) {
+            printf("loadsettings: failed to allocate FatFS structs\n");
+            if (fil) Frens::f_free(fil);
+            if (dir) Frens::f_free(dir);
+            if (fno) Frens::f_free(fno);
+            resetsettings();
+            return;
+        }
+        UINT br;
+        FRESULT fr;
+        // Load settings from file
+        printf("Loading settings\n");
+        // determine size of settings file
+        fr = f_stat(getSettingsFileName(), fno);
+        if (fr == FR_OK)
+        {
+            printf("Size of %s: %lu bytes\n", getSettingsFileName(), fno->fsize);
+            if (fno->fsize != sizeof(settings))
+            {
+                printf("Size of %s is not %d bytes, resetting settings\n", getSettingsFileName(), sizeof(settings));
+                resetsettings();
+                savesettings();
+            }
+            else
+            {
+                fr = f_open(fil, getSettingsFileName(), FA_READ);
+                if (fr == FR_OK)
+                {
+                    fr = f_read(fil, &settings, sizeof(settings), &br);
+                    if (fr)
+                    {
+                        printf("Error reading %s: %d\n", getSettingsFileName(), fr);
+                        resetsettings();
+                    }
+                    else
+                    {
+                        // If file is corrupt, reset settings to default
+                        if (br != sizeof(settings)  || settings.version != SETTINGS_VERSION)
+                        {
+                            if (settings.version != SETTINGS_VERSION) {
+                                printf("File %s has wrong version %d, expected %d\n", getSettingsFileName(), settings.version, SETTINGS_VERSION);
+                            } else {
+                                printf("File %s is corrupt, expected %d bytes, read %d\n", getSettingsFileName(), sizeof(settings), br);
+                            }
+                            resetsettings();
+                            savesettings();
+                        }
+                        else
+                        {
+                            printf("Read %d bytes from %s\n", br, getSettingsFileName());
+                        }
+                    }
+                    f_close(fil);
+                }
+                else
+                {
+                    // If file does not exist, reset settings to default
+                    if (fr == FR_NO_FILE)
+                    {
+                        printf("File %s does not exist\n", getSettingsFileName());
+                    }
+                    else
+                    {
+                        printf("Error opening %s: %d\n", getSettingsFileName(), fr);
+                    }
+                    resetsettings();
+                }
+
+                // if settings.currentDir is no valid directory, reset settings to default
+                if (f_opendir(dir, settings.currentDir) != FR_OK)
+                {
+                    printf("Directory %s does not exist\n", settings.currentDir);
+                    resetsettings();
+                }
+            }
+        }
+        else
+        {
+            printf("Settings file not found %s: %d\n", getSettingsFileName(), fr);
+            resetsettings();
+        }
+        Frens::f_free(fil);
+        Frens::f_free(dir);
+        Frens::f_free(fno);
+        printsettings();
+    }
+    // Get the current emulator type, this may be different from emulatorTypeForSettings when in multi-emulator mode
+    emulators getEmulatorType()
+    {
+        return emulatorType;
+    }
+    // Get the current emulator type as a string, this may be different from emulatorTypeForSettings when in multi-emulator mode
+    const char *getEmulatorTypeString(bool forSettings)
+    {
+        if (forSettings)
+        {
+            return emulatorstrings[static_cast<int>(emulatorTypeForSettings)];
+        }
+        return emulatorstrings[static_cast<int>(emulatorType)];
+    }
+    
+    // Get the current emulator type for settings, used in multi-emulator mode
+    emulators getEmulatorTypeForSettings()
+    {
+        return emulatorTypeForSettings;
+    }
+}

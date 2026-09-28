@@ -1,0 +1,6 @@
+/build/
+*.rom
+*.rom.sym
+*.uf2
+.DS_Store
+._*
